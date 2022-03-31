@@ -11,4 +11,19 @@ SELECT
  
  ---------------------------------------------------------------
  
+ -- SQL 2
+ 
+ SELECT SUM(aot.tax_value * aot.quantity) total_tax_value
+   FROM atl_order_ticket aot
+  WHERE aot.order_id IN (SELECT ao.id 
+                            FROM atl_order ao
+                           WHERE ao.event_id = 33)
+    AND aot.price IS NOT NULL
+    AND aot.order_id NOT IN (SELECT GROUP_CONCAT(aop.order_id)
+    						   FROM atl_order_payment aop
+    						  WHERE aop.event_id = 33
+    						    AND aop.status NOT IN ('PAYMENT_OVERDUE', 'PAYMENT_DELETED', 'PENDING', 'PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE', 'PAYMENT_AWAITING_CHARGEBACK_REVERSAL')
+    						    AND aop.pay_id IS NOT NULL)
+
+ 
  
