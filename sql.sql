@@ -24,6 +24,26 @@ SELECT
     						  WHERE aop.event_id = 33
     						    AND aop.status NOT IN ('PAYMENT_OVERDUE', 'PAYMENT_DELETED', 'PENDING', 'PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE', 'PAYMENT_AWAITING_CHARGEBACK_REVERSAL')
     						    AND aop.pay_id IS NOT NULL)
+						    
+---------------------------------------------------------------
+-- SQL 3
+
+  SELECT CASE WHEN SUM(aop.amount) = 0 
+  	      THEN 'PAYMENT_CONFIRMED' 
+  	      ELSE 
+  		CASE
+  		     WHEN GROUP_CONCAT(DISTINCT aop.status) LIKE '%PAYMENT_CONFIRMED%' THEN 'PAYMENT_CONFIRMED'
+  		     WHEN GROUP_CONCAT(DISTINCT aop.status) LIKE '%PAYMENT_RECEIVED%' THEN 'PAYMENT_CONFIRMED'
+  		     WHEN GROUP_CONCAT(DISTINCT aop.status) LIKE '%PENDING%' THEN 'PENDING'
+  		     ELSE GROUP_CONCAT(DISTINCT aop.status)
+  		 END 
+          END STAUS_PAYMENT,
+  		SUM(aop.amount),
+  		GROUP_CONCAT(DISTINCT aop.status) 
+    FROM atl_order_payment aop
+    WHERE aop.order_id IN (SELECT aut.order_id 
+                             FROM atl_user_ticket aut)
+  GROUP BY aop.order_id  
 
  
  
