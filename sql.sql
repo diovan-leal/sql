@@ -85,6 +85,52 @@ WHERE aot.order_id IN (SELECT ao.id
 		   aot.tax_type, 
 		   aot.tax_value, 
 		   orders.order_id*/
+		   
+------------------------------------------------------------------------------------------------
+
+-- SQL 5
+
+SELECT ae.id, ae.token, ae.name, ae.start_date, ae.visibility, ae.status_id, ae.ads_city, ae.ads_state, 
+	   DATEDIFF(ae.start_date, DATE_FORMAT(NOW(), '%Y-%m-%d')) rank,
+	   balance_remaining.amount,
+	   totalOrders.valueToReceive
+  FROM atl_event ae
+  LEFT OUTER JOIN (SELECT at2.event_id, sum(at2.amount) amount  
+    				   FROM atl_transfer at2
+                      WHERE at2.status = 'transferred'
+                   GROUP BY at2.event_id) balance_remaining ON balance_remaining.event_id = ae.id
+        LEFT JOIN (SELECT 
+	   					sum(CASE 
+	   							WHEN aot.fee = 0 
+	   								THEN (aot.total - (aot.tax_value - aot.quantity)) - IFNULL(o.discount, 0) 
+	   								ELSE aot.total - (aot.fee * aot.quantity) - IFNULL(o.discount, 0)
+	   							END) valueToReceive,
+	   				     o.event_id
+  				 FROM atl_order_ticket aot
+                 JOIN (SELECT ao.id,
+  			                  ao.discount,
+  			                  ao.event_id
+  		                 FROM atl_order ao
+ 		                WHERE ao.event_id = 250
+   		                  AND ao.is_deleted = 0
+   		                  AND ao.status_id IN (4, 5)) o ON o.id = aot.order_id 
+            LEFT JOIN (SELECT aop2.order_id, aop2.pay_id, aop2.amount total_value
+  			             FROM  atl_order_payment aop2
+ 			            WHERE aop2.order_id IN (SELECT ao.id 
+  										          FROM atl_order ao
+ 									             WHERE ao.event_id = 250
+   										           AND  ao.is_deleted = 0
+   										           AND ao.status_id IN (4, 5))
+   				          AND aop2.pay_id IS NOT NULL 
+   				          AND aop2.pay_id  <> ''
+   				          AND aop2.pay_id NOT IN ('PAYMENT_OVERDUE', 'PAYMENT_DELETED', 'PENDING', 'PAYMENT_REFUNDED')
+		             GROUP BY aop2.pay_id, aop2.amount, aop2.order_id) orders ON orders.order_id = aot.order_id
+                 WHERE aot.order_id IN (SELECT ao.id 
+  						                  FROM atl_order ao
+ 						                 WHERE ao.event_id = 250
+   						                   AND ao.is_deleted = 0
+   						                   AND ao.status_id IN (4, 5))
+                   AND aot.price IS NOT NULL) totalOrders ON totalOrders.event_id = ae.id
 
  
  
